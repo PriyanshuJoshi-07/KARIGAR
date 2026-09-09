@@ -1,0 +1,1 @@
+-- Placeholder initial migration. Prefer `npx prisma db push` or `npx prisma migrate dev` in development.

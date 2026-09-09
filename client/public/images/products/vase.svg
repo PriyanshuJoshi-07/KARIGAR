@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#F3E6D8"/>
+  <path d="M340 90h120l20 70c40 30 70 90 70 160 0 110-70 190-150 190s-150-80-150-190c0-70 30-130 70-160Z" fill="#B55239"/>
+  <ellipse cx="400" cy="90" rx="70" ry="18" fill="#D9A066"/>
+  <path d="M310 250c40 20 140 20 180 0" fill="none" stroke="#8B3A2A" stroke-width="6"/>
+  <text x="400" y="560" text-anchor="middle" font-family="Georgia" font-size="22" fill="#5C3317">Khurja terracotta vase</text>
+</svg>

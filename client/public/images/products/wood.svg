@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#F4E8D0"/>
+  <ellipse cx="400" cy="340" rx="90" ry="120" fill="#D35400"/>
+  <circle cx="400" cy="200" r="70" fill="#F4D03F"/>
+  <circle cx="375" cy="190" r="8" fill="#2C180A"/>
+  <circle cx="425" cy="190" r="8" fill="#2C180A"/>
+  <path d="M370 220c20 16 40 16 60 0" fill="none" stroke="#2C180A" stroke-width="4"/>
+  <path d="M250 180c-20-40 20-70 50-40" fill="#1ABC9C"/>
+  <path d="M550 180c20-40-20-70-50-40" fill="#1ABC9C"/>
+  <text x="400" y="560" text-anchor="middle" font-family="Georgia" font-size="22" fill="#6E3F1A">Channapatna wooden bird</text>
+</svg>

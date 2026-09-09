@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#2C180A"/>
+  <ellipse cx="400" cy="520" rx="90" ry="18" fill="#B8860B"/>
+  <rect x="370" y="400" width="60" height="120" fill="#C9A227"/>
+  <path d="M280 220c0-90 240-90 240 0v180c0 40-70 70-120 70s-120-30-120-70Z" fill="#B8860B"/>
+  <circle cx="400" cy="280" r="18" fill="#F5DEB3"/>
+  <circle cx="340" cy="300" r="10" fill="#F5DEB3"/>
+  <circle cx="460" cy="300" r="10" fill="#F5DEB3"/>
+  <circle cx="400" cy="340" r="12" fill="#F5DEB3"/>
+  <text x="400" y="40" text-anchor="middle" font-family="Georgia" font-size="22" fill="#F5DEB3">Moradabad brass lamp</text>
+</svg>

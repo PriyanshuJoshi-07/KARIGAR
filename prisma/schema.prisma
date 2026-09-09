@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../server/node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  SELLER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  role      Role     @default(BUYER)
+  language  String   @default("en")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sellerProfile SellerProfile?
+  buyerProfile  BuyerProfile?
+  reviews       Review[]
+  cart          Cart?
+  orders        Order[]
+}
+
+model SellerProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  craft       String
+  bio         String
+  originState String
+  originCity  String
+  story       String
+  avatarUrl   String?
+  products    Product[]
+}
+
+model BuyerProfile {
+  id     String  @id @default(cuid())
+  userId String  @unique
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  state  String?
+  city   String?
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  nameHi      String
+  description String
+  products    Product[]
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  title            String
+  shortDescription String
+  longDescription  String
+  material         String
+  craft            String
+  features         Json
+  artisanStory     String
+  basePrice        Int
+  categoryId       String
+  category         Category @relation(fields: [categoryId], references: [id])
+  sellerId         String
+  seller           SellerProfile @relation(fields: [sellerId], references: [id])
+  originState      String
+  originCity       String
+  size             String   @default("medium")
+  rating           Float    @default(0)
+  reviewCount      Int      @default(0)
+  featured         Boolean  @default(false)
+  popular          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  images     ProductImage[]
+  reviews    Review[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  promotion  Promotion?
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String
+  isPrimary Boolean @default(false)
+  sortOrder Int     @default(0)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  buyerName   String
+  buyerState  String
+  buyerCity   String?
+  subtotal    Int
+  deliveryFee Int
+  total       Int
+  status      OrderStatus @default(CONFIRMED)
+  createdAt   DateTime    @default(now())
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Int
+  title     String
+}
+
+model Promotion {
+  id        String  @id @default(cuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  script    String
+  caption   String
+  hashtags  Json
+  reelText  String
+}
