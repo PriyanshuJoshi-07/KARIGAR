@@ -20,7 +20,7 @@ export async function analyzeImageHandler(req: Request, res: Response, next: Nex
       throw new AppError(400, "Upload a photo or provide a product hint");
     }
     const result = await analyzeImage({ filename: file?.originalname, hint });
-    const imageUrl = file ? `/uploads/${file.filename}` : undefined;
+    const imageUrl = file ? new URL(`/uploads/${file.filename}`, config.serverOrigin).toString() : undefined;
     res.json({ analysis: result, imageUrl, demo: result.demo });
   } catch (err) {
     next(err);

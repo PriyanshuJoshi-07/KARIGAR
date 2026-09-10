@@ -49,8 +49,9 @@ export async function listProducts(req: Request, res: Response, next: NextFuncti
 
 export async function getProduct(req: Request, res: Response, next: NextFunction) {
   try {
+    const productId = typeof req.params.id === "string" ? req.params.id : "";
     const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
+      where: { id: productId },
       include: {
         ...productInclude,
         reviews: {
@@ -190,7 +191,8 @@ export async function createProduct(req: Request, res: Response, next: NextFunct
 
 export async function updateProduct(req: Request, res: Response, next: NextFunction) {
   try {
-    const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
+    const productId = typeof req.params.id === "string" ? req.params.id : "";
+    const existing = await prisma.product.findUnique({ where: { id: productId } });
     if (!existing) throw new AppError(404, "Product not found");
     const body = req.body as Record<string, unknown>;
     const data: Record<string, unknown> = {};
@@ -206,7 +208,7 @@ export async function updateProduct(req: Request, res: Response, next: NextFunct
       data.basePrice = Math.round(price);
     }
     const product = await prisma.product.update({
-      where: { id: req.params.id },
+      where: { id: productId },
       data,
       include: productInclude
     });
@@ -218,9 +220,10 @@ export async function updateProduct(req: Request, res: Response, next: NextFunct
 
 export async function deleteProduct(req: Request, res: Response, next: NextFunction) {
   try {
-    const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
+    const productId = typeof req.params.id === "string" ? req.params.id : "";
+    const existing = await prisma.product.findUnique({ where: { id: productId } });
     if (!existing) throw new AppError(404, "Product not found");
-    await prisma.product.delete({ where: { id: req.params.id } });
+    await prisma.product.delete({ where: { id: productId } });
     res.json({ ok: true });
   } catch (err) {
     next(err);

@@ -1,10 +1,9 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useSeller, type DraftImage } from "./SellerContext";
+import { useSeller } from "./SellerContext";
 import { api } from "../../services/api";
 import { ErrorBanner } from "../../components/ErrorBanner";
-import { isPersistentImageUrl, revokeIfBlob } from "../../utils/images";
 
 const MAX = 3;
 
@@ -18,8 +17,6 @@ export function PhotosPage() {
   const [busy, setBusy] = useState(false);
   const [enhanceIdx, setEnhanceIdx] = useState<number | null>(null);
 
-  const persisted = draft.images.filter((img) => isPersistentImageUrl(img.persistentUrl));
-
   async function addFiles(files: FileList | null) {
     setErr(null);
     if (!files?.length) return;
@@ -28,79 +25,65 @@ export function PhotosPage() {
       return;
     }
 
-    setBusy(true);
-    const next: DraftImage[] = [...draft.images];
-    try {
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith("image/")) {
-          setErr(t("invalidImage"));
-          continue;
-        }
-        const previewUrl = URL.createObjectURL(file);
-        try {
-          const res = await api.analyzeImage(file, file.name);
-          if (!isPersistentImageUrl(res.imageUrl)) {
-            revokeIfBlob(previewUrl);
-            setErr(t("failedUpload"));
-            return;
-          }
-          revokeIfBlob(previewUrl);
-          const stored: DraftImage = {
-            url: res.imageUrl!,
-            previewUrl: res.imageUrl!,
-            persistentUrl: res.imageUrl,
-            name: file.name
-          };
-          next.push(stored);
-          if (!draft.analysis || next.length === 1) {
-            patch({
-              analysis: res.analysis,
-              material: draft.material || res.analysis.material,
-              productName: draft.productName || res.analysis.productType
-            });
-          }
-        } catch (e) {
-          revokeIfBlob(previewUrl);
-          setErr(e instanceof Error ? e.message : t("failedUpload"));
-          return;
-        }
+    const validFiles = Array.from(files).filter((file) => {
+      if (!file.type.startsWith("image/")) {
+        setErr(t("invalidImage"));
+        return false;
       }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    const next: typeof draft.images = [];
+    let previewUrls: string[] = [];
+    let analysisResult: Awaited<ReturnType<typeof api.analyzeImage>> | null = null;
+
+    try {
+      setBusy(true);
+      for (const file of validFiles) {
+        const previewUrl = URL.createObjectURL(file);
+        previewUrls.push(previewUrl);
+        const res = await api.analyzeImage(file, file.name);
+        const imageUrl = res.imageUrl || "";
+        if (!imageUrl || imageUrl.startsWith("blob:")) {
+          throw new Error("Upload did not return a persistent image URL");
+        }
+        if (!analysisResult) analysisResult = res;
+        next.push({ url: imageUrl, file, name: file.name, previewUrl });
+      }
+
+      const merged = [...draft.images, ...next];
       patch({
-        images: next,
-        chosenUrls: next.map((i) => i.persistentUrl!).filter((url) => isPersistentImageUrl(url))
+        images: merged,
+        chosenUrls: merged.map((i) => i.url),
+        analysis: analysisResult?.analysis ?? draft.analysis,
+        material: analysisResult?.analysis.material ?? draft.material,
+        productName: draft.productName || analysisResult?.analysis.productType || draft.productName
       });
+      next.forEach((img) => URL.revokeObjectURL(img.previewUrl || ""));
+      previewUrls = [];
+    } catch (e) {
+      previewUrls.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+      setErr(e instanceof Error ? e.message : t("failedUpload"));
     } finally {
       setBusy(false);
-      if (fileRef.current) fileRef.current.value = "";
-      if (camRef.current) camRef.current.value = "";
     }
   }
 
   async function improve(i: number) {
     const img = draft.images[i];
-    if (!img?.persistentUrl) {
-      setErr(t("failedUpload"));
-      return;
-    }
+    if (!img) return;
     setBusy(true);
     try {
-      const res = await api.enhanceImage(img.persistentUrl);
-      const enhancedUrl = isPersistentImageUrl(res.enhancedUrl) ? res.enhancedUrl : img.persistentUrl;
-      patch({ enhanced: { ...draft.enhanced, [img.persistentUrl]: enhancedUrl } });
+      const res = await api.enhanceImage(img.url);
+      patch({ enhanced: { ...draft.enhanced, [img.url]: res.enhancedUrl } });
       setEnhanceIdx(i);
     } catch (e) {
       setErr(e instanceof Error ? e.message : t("aiUnavailable"));
     } finally {
       setBusy(false);
     }
-  }
-
-  function goNext() {
-    if (!persisted.length) {
-      setErr(t("failedUpload"));
-      return;
-    }
-    nav("/sell/voice");
   }
 
   return (
@@ -111,17 +94,17 @@ export function PhotosPage() {
         <ErrorBanner message={err} />
       </div>
       <div className="mt-4 flex flex-wrap gap-3">
-        <button className="btn-primary" type="button" onClick={() => camRef.current?.click()} disabled={busy}>
+        <button className="btn-primary" type="button" onClick={() => camRef.current?.click()}>
           {t("capture")}
         </button>
-        <button className="btn-secondary" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
+        <button className="btn-secondary" type="button" onClick={() => fileRef.current?.click()}>
           {t("upload")}
         </button>
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={(e) => addFiles(e.target.files)} />
+        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => addFiles(e.target.files)} />
         <input
           ref={camRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/*"
           capture="environment"
           className="hidden"
           onChange={(e) => addFiles(e.target.files)}
@@ -130,8 +113,8 @@ export function PhotosPage() {
       {busy && <p className="mt-3 text-sm text-clay-600">{t("analyzing")}</p>}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {draft.images.map((img, i) => (
-          <figure key={img.persistentUrl || img.previewUrl} className="card overflow-hidden p-0">
-            <img src={draft.chosenUrls[i] || img.previewUrl} alt="" className="aspect-square w-full object-cover" />
+          <figure key={img.url} className="card overflow-hidden p-0">
+            <img src={draft.chosenUrls[i] || img.previewUrl || img.url} alt="" className="aspect-square w-full object-cover" />
             <figcaption className="p-3 text-xs">
               <button className="text-clay-700 underline" type="button" onClick={() => improve(i)}>
                 {t("improvePhoto")}
@@ -146,12 +129,12 @@ export function PhotosPage() {
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div>
               <p className="text-xs text-clay-500">{t("before")}</p>
-              <img src={draft.images[enhanceIdx].persistentUrl || draft.images[enhanceIdx].previewUrl} alt="" className="mt-1 rounded-lg" />
+              <img src={draft.images[enhanceIdx].url} alt="" className="mt-1 rounded-lg" />
             </div>
             <div>
               <p className="text-xs text-clay-500">{t("after")}</p>
               <img
-                src={draft.enhanced[draft.images[enhanceIdx].persistentUrl || ""] || draft.images[enhanceIdx].previewUrl}
+                src={draft.enhanced[draft.images[enhanceIdx].url] || draft.images[enhanceIdx].url}
                 alt=""
                 className="mt-1 rounded-lg brightness-110 contrast-105"
               />
@@ -163,9 +146,8 @@ export function PhotosPage() {
               type="button"
               onClick={() => {
                 const urls = [...draft.chosenUrls];
-                const key = draft.images[enhanceIdx].persistentUrl || "";
-                urls[enhanceIdx] = draft.enhanced[key] || key;
-                patch({ chosenUrls: urls.filter((url) => isPersistentImageUrl(url)) });
+                urls[enhanceIdx] = draft.enhanced[draft.images[enhanceIdx].url] || draft.images[enhanceIdx].url;
+                patch({ chosenUrls: urls });
                 setEnhanceIdx(null);
               }}
             >
@@ -190,7 +172,12 @@ export function PhotosPage() {
           </p>
         </div>
       )}
-      <button className="btn-primary mt-8 w-full" type="button" disabled={persisted.length < 1 || busy} onClick={goNext}>
+      <button
+        className="btn-primary mt-8 w-full"
+        type="button"
+        disabled={draft.images.length < 1}
+        onClick={() => nav("/sell/voice")}
+      >
         {t("next")}
       </button>
     </div>

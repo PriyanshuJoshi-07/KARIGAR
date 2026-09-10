@@ -7,11 +7,13 @@ const app = createApp();
 
 describe("API health and catalog", () => {
   let productId = "";
+  let dbReady = false;
 
   before(async () => {
     const res = await request(app).get("/api/products");
-    if (res.status === 200 && res.body.products?.[0]) {
-      productId = res.body.products[0].id;
+    if (res.status === 200 && Array.isArray(res.body.products)) {
+      dbReady = true;
+      productId = res.body.products[0]?.id || "";
     }
   });
 
@@ -22,8 +24,9 @@ describe("API health and catalog", () => {
   });
 
   it("lists products when database is ready", async () => {
+    if (!dbReady) return;
     const res = await request(app).get("/api/products");
-    if (res.status !== 200) return;
+    assert.equal(res.status, 200);
     assert.ok(Array.isArray(res.body.products));
     assert.ok(res.body.products.length >= 6);
   });
@@ -120,7 +123,7 @@ describe("API health and catalog", () => {
   });
 
   it("can fetch a seeded product", async () => {
-    if (!productId) return;
+    if (!dbReady || !productId) return;
     const res = await request(app).get(`/api/products/${productId}`);
     assert.equal(res.status, 200);
     assert.equal(res.body.product.id, productId);

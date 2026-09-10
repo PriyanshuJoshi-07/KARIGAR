@@ -74,8 +74,9 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
 
 export async function getOrder(req: Request, res: Response, next: NextFunction) {
   try {
+    const orderId = typeof req.params.id === "string" ? req.params.id : "";
     const order = await prisma.order.findUnique({
-      where: { id: req.params.id },
+      where: { id: orderId },
       include: { items: true }
     });
     if (!order) throw new AppError(404, "Order not found");
