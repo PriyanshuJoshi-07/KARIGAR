@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build --prefix client",
+  "outputDirectory": "client/dist",
+  "installCommand": "npm install && npm install --prefix server && npm install --prefix client && npx prisma generate",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/uploads/:path*", "destination": "/api" }
+  ]
+}
