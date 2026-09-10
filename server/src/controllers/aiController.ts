@@ -5,7 +5,8 @@ import { transcribe } from "../ai/speech.js";
 import { generateDescription } from "../ai/description.js";
 import { researchCraft } from "../ai/research.js";
 import { generatePromotion } from "../ai/promotion.js";
-import { calculateDelivery } from "../ai/pricing.js";
+import { calculateDelivery, suggestPrice } from "../ai/pricing.js";
+import { extractDetailsFromTranscript } from "../ai/extract.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { cleanText } from "../utils/sanitize.js";
 import { config } from "../utils/config.js";
@@ -48,24 +49,107 @@ export async function transcribeHandler(req: Request, res: Response, next: NextF
   }
 }
 
+function descriptionInput(body: Record<string, unknown>) {
+  const transcript = cleanText(body.transcript ?? body.text, 2000);
+  const extracted = extractDetailsFromTranscript(transcript);
+  return {
+    transcript,
+    productName: extracted.productName || cleanText(body.productName, 160),
+    material: extracted.material || cleanText(body.material, 120),
+    duration: extracted.duration || cleanText(body.duration, 80),
+    extra: extracted.extra || cleanText(body.extra, 500),
+    productType: extracted.productName || cleanText(body.productType, 80),
+    craft: extracted.craft || cleanText(body.craft, 80),
+    artisanName: cleanText(body.artisanName, 80),
+    originCity: cleanText(body.originCity, 80),
+    originState: cleanText(body.originState, 80),
+    imageUrl: cleanText(body.imageUrl ?? body.image, 500),
+    size: cleanText(body.size, 20)
+  };
+}
+
 export async function generateDescriptionHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const body = req.body as Record<string, string>;
-    if (!body.productName && !body.productType && !body.material) {
-      throw new AppError(400, "Share product name, material or type to generate a description");
+    const body = req.body as Record<string, unknown>;
+    const input = descriptionInput(body);
+    if (!input.productName && !input.productType && !input.material && !input.transcript) {
+      throw new AppError(400, "Share product name, material, transcript or type to generate a description");
     }
-    const result = await generateDescription({
-      productName: cleanText(body.productName, 160),
-      material: cleanText(body.material, 120),
-      duration: cleanText(body.duration, 80),
-      extra: cleanText(body.extra, 500),
-      productType: cleanText(body.productType, 80),
-      craft: cleanText(body.craft, 80),
-      artisanName: cleanText(body.artisanName, 80),
-      originCity: cleanText(body.originCity, 80),
-      originState: cleanText(body.originState, 80)
+    const result = await generateDescription(input);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function generateProductHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const input = descriptionInput(body);
+    if (!input.productName && !input.material && !input.transcript) {
+      throw new AppError(400, "Share a transcript or product details to generate the listing");
+    }
+    const result = await generateDescription(input);
+    res.json({
+      title: result.title,
+      description: result.description,
+      story: result.story,
+      category: result.category,
+      craftType: result.craftType,
+      craft: result.craft,
+      material: result.material,
+      tags: result.tags,
+      suggestedPrice: result.suggestedPrice,
+      image: result.image || input.imageUrl || null,
+      shortDescription: result.shortDescription,
+      longDescription: result.longDescription,
+      artisanStory: result.artisanStory,
+      features: result.features,
+      categorySlug: result.categorySlug,
+      demo: result.demo
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function suggestPriceHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const transcript = cleanText(body.transcript ?? body.text, 2000);
+    const extracted = extractDetailsFromTranscript(transcript);
+    const productName = cleanText(body.productName, 160) || extracted.productName;
+    const material = cleanText(body.material, 120) || extracted.material;
+    if (!productName && !material && !transcript) {
+      throw new AppError(400, "Share product details to suggest a price");
+    }
+    const result = suggestPrice({
+      productName,
+      material,
+      craft: cleanText(body.craft, 80) || extracted.craft,
+      categorySlug: cleanText(body.categorySlug, 40) || extracted.categorySlug,
+      duration: cleanText(body.duration, 80) || extracted.duration,
+      extra: cleanText(body.extra, 500) || extracted.extra,
+      size: cleanText(body.size, 20)
     });
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function translateHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const text = cleanText(req.body?.text ?? req.body?.q, 2000);
+    const language = cleanText(req.body?.language ?? req.body?.target, 8) || "en";
+    if (!text) throw new AppError(400, "Text to translate is required");
+    res.json({
+      text,
+      translated: text,
+      language,
+      demo: true,
+      notice: "Demo translation returns the original text so the walkthrough works without a paid provider."
+    });
   } catch (err) {
     next(err);
   }

@@ -47,12 +47,21 @@ export const api = {
       body: JSON.stringify({ url })
     }),
   transcribe: (text: string, language: string) =>
-    request<{ transcript: string; parsedPrice: number | null; demo: boolean }>("/ai/transcribe", {
+    request<TranscriptResult>("/ai/transcribe", {
       method: "POST",
       body: JSON.stringify({ text, language })
     }),
   generateDescription: (body: Record<string, string>) =>
     request<GeneratedDescription>("/ai/generate-description", { method: "POST", body: JSON.stringify(body) }),
+  generateProduct: (body: Record<string, string>) =>
+    request<GeneratedDescription>("/ai/generate-product", { method: "POST", body: JSON.stringify(body) }),
+  suggestPrice: (body: Record<string, string>) =>
+    request<PriceSuggestion>("/ai/suggest-price", { method: "POST", body: JSON.stringify(body) }),
+  translate: (text: string, language: string) =>
+    request<{ text: string; translated: string; language: string; demo: boolean }>("/ai/translate", {
+      method: "POST",
+      body: JSON.stringify({ text, language })
+    }),
   research: (craft: string) => request<CraftResearch>("/ai/research", { method: "POST", body: JSON.stringify({ craft }) }),
   generatePromotion: (body: Record<string, string>) =>
     request<PromotionContent>("/ai/generate-promotion", { method: "POST", body: JSON.stringify(body) }),
@@ -149,14 +158,43 @@ export interface ImageAnalysis {
   demo: boolean;
 }
 
+export interface TranscriptResult {
+  transcript: string;
+  parsedPrice: number | null;
+  demo: boolean;
+  productName: string;
+  material: string;
+  duration: string;
+  extra: string;
+  category: string;
+  categorySlug: string;
+  craft: string;
+  tags: string[];
+}
+
 export interface GeneratedDescription {
   title: string;
+  description?: string;
   shortDescription: string;
   longDescription: string;
-  material: string;
+  story?: string;
+  category?: string;
+  categorySlug?: string;
   craft: string;
+  craftType?: string;
+  material: string;
+  tags?: string[];
+  suggestedPrice?: number;
+  image?: string | null;
   features: string[];
   artisanStory: string;
+  demo: boolean;
+}
+
+export interface PriceSuggestion {
+  suggestedPrice: number;
+  currency: string;
+  rationale: string;
   demo: boolean;
 }
 

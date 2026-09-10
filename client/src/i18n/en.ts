@@ -86,6 +86,7 @@ export const en = {
   productName: "Product name",
   duration: "Time to make",
   extra: "Anything else",
+  suggestedPrice: "Suggest a price",
   startTalking: "Start talking",
   stopTalking: "Stop",
   transcript: "Transcript",

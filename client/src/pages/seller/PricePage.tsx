@@ -16,8 +16,31 @@ export function PricePage() {
   const [err, setErr] = useState<string | null>(null);
   const [priceText, setPriceText] = useState(draft.basePrice ? String(draft.basePrice) : "");
 
+  async function suggest() {
+    setErr(null);
+    try {
+      const res = await api.suggestPrice({
+        transcript: draft.transcript,
+        productName: draft.productName,
+        material: draft.material,
+        duration: draft.duration,
+        extra: draft.extra,
+        craft: draft.description?.craft || draft.analysis?.craft || "",
+        size: draft.size
+      });
+      patch({ basePrice: res.suggestedPrice });
+      setPriceText(String(res.suggestedPrice));
+      await calc(res.suggestedPrice);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t("networkError"));
+    }
+  }
+
   async function applyPrice(raw: string) {
-    const res = await api.transcribe(raw, getLang()).catch(() => null);
+    const res = await api.transcribe(raw, getLang()).catch((e) => {
+      setErr(e instanceof Error ? e.message : t("networkError"));
+      return null;
+    });
     const n = res?.parsedPrice ?? Number(raw.replace(/[^\d.]/g, ""));
     if (!Number.isFinite(n) || n <= 0) {
       setErr(t("invalidPrice"));
@@ -50,13 +73,18 @@ export function PricePage() {
       <div className="mt-3">
         <ErrorBanner message={err} />
       </div>
-      <button
-        className="btn-primary mt-4"
-        type="button"
-        onClick={() => speech.start((text) => applyPrice(text))}
-      >
-        {speech.listening ? t("listening") : t("startTalking")}
-      </button>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          className="btn-primary"
+          type="button"
+          onClick={() => speech.start((text) => applyPrice(text))}
+        >
+          {speech.listening ? t("listening") : t("startTalking")}
+        </button>
+        <button className="btn-secondary" type="button" onClick={suggest}>
+          {t("suggestedPrice")}
+        </button>
+      </div>
       <label className="mt-4 block">
         <span className="text-sm">{t("basePrice")}</span>
         <input

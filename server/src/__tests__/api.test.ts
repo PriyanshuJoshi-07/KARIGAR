@@ -44,6 +44,45 @@ describe("API health and catalog", () => {
     assert.ok(res.body.title);
   });
 
+  it("extracts spoken product fields from transcript", async () => {
+    const res = await request(app).post("/api/ai/transcribe").send({
+      text: "This is a flower pot. It is made of clay and sand. It takes about 10 days to make. It is strong and usable.",
+      language: "en"
+    });
+    assert.equal(res.status, 200);
+    assert.match(res.body.productName.toLowerCase(), /flower pot/);
+    assert.match(res.body.material.toLowerCase(), /clay and sand/);
+    assert.match(res.body.duration.toLowerCase(), /10 days/);
+    assert.match(res.body.extra.toLowerCase(), /strong and usable/);
+  });
+
+  it("generate-product uses the actual transcript", async () => {
+    const res = await request(app).post("/api/ai/generate-product").send({
+      transcript:
+        "This is a flower pot. It is made of clay and sand. It takes about 10 days to make. It is strong and usable."
+    });
+    assert.equal(res.status, 200);
+    assert.match(res.body.title.toLowerCase(), /flower pot/);
+    assert.match(String(res.body.description).toLowerCase(), /clay and sand/);
+    assert.ok(res.body.suggestedPrice > 0);
+    assert.ok(res.body.category);
+    assert.ok(res.body.craftType || res.body.craft);
+    assert.ok(Array.isArray(res.body.tags));
+  });
+
+  it("suggests a price from speech details", async () => {
+    const res = await request(app).post("/api/ai/suggest-price").send({
+      transcript: "This is a bamboo basket made by hand. It takes two days to make and is useful for storage."
+    });
+    assert.equal(res.status, 200);
+    assert.ok(res.body.suggestedPrice > 0);
+  });
+
+  it("translate does not hide missing text", async () => {
+    const res = await request(app).post("/api/ai/translate").send({});
+    assert.equal(res.status, 400);
+  });
+
   it("calculates delivery", async () => {
     const res = await request(app).post("/api/ai/calculate-delivery").send({
       originState: "Assam",

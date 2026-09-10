@@ -17,18 +17,26 @@ export function DescriptionPage() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await api.generateDescription({
+      const res = await api.generateProduct({
+        transcript: draft.transcript,
         productName: draft.productName,
         material: draft.material,
         duration: draft.duration,
-        extra: draft.extra || draft.transcript,
+        extra: draft.extra,
         productType: draft.analysis?.productType || "",
-        craft: draft.analysis?.craft || "",
+        craft: draft.analysis?.craft || draft.description?.craft || "",
         artisanName: draft.artisanName,
         originCity: draft.originCity,
-        originState: draft.originState
+        originState: draft.originState,
+        imageUrl: draft.chosenUrls[0] || "",
+        size: draft.size
       });
-      patch({ description: res });
+      patch({
+        description: res,
+        productName: res.title || draft.productName,
+        material: res.material || draft.material,
+        basePrice: res.suggestedPrice || draft.basePrice
+      });
       if (res.craft) {
         await api.research(res.craft).catch(() => null);
       }

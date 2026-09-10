@@ -1,4 +1,5 @@
 import { config } from "../utils/config.js";
+import { durationDays } from "./extract.js";
 
 export interface DeliveryEstimate {
   originState: string;
@@ -64,5 +65,76 @@ export function calculateDelivery(input: {
     total,
     etaDays,
     demo: config.demoMode
+  };
+}
+
+export interface PriceSuggestion {
+  suggestedPrice: number;
+  currency: string;
+  rationale: string;
+  demo: boolean;
+}
+
+const CATEGORY_BASE: Record<string, number> = {
+  pottery: 700,
+  baskets: 800,
+  paintings: 1800,
+  wood: 650,
+  lamps: 1500,
+  textiles: 1200,
+  jewellery: 1400
+};
+
+export function suggestPrice(input: {
+  material?: string;
+  craft?: string;
+  categorySlug?: string;
+  duration?: string;
+  extra?: string;
+  size?: string;
+  productName?: string;
+}): PriceSuggestion {
+  const haystack = `${input.categorySlug || ""} ${input.craft || ""} ${input.productName || ""}`.toLowerCase();
+  const slug =
+    input.categorySlug && CATEGORY_BASE[input.categorySlug]
+      ? input.categorySlug
+      : haystack.includes("potter") || haystack.includes("pot") || haystack.includes("vase")
+        ? "pottery"
+        : haystack.includes("basket") || haystack.includes("weav")
+          ? "baskets"
+          : haystack.includes("paint")
+            ? "paintings"
+            : haystack.includes("wood")
+              ? "wood"
+              : haystack.includes("lamp")
+                ? "lamps"
+                : haystack.includes("textile") || haystack.includes("cloth") || haystack.includes("fabric")
+                  ? "textiles"
+                  : haystack.includes("jewel")
+                    ? "jewellery"
+                    : "baskets";
+
+  let price = CATEGORY_BASE[slug] ?? 750;
+  const days = durationDays(input.duration || "");
+  if (days) price += Math.min(800, days * 40);
+  const mat = (input.material || "").toLowerCase();
+  if (mat.includes("brass") || mat.includes("silk") || mat.includes("gold")) price += 300;
+  if (mat.includes("clay") || mat.includes("bamboo") || mat.includes("sand")) price += 50;
+  const size = (input.size || "medium").toLowerCase();
+  if (size === "small") price -= 80;
+  if (size === "large") price += 150;
+  price = Math.max(150, Math.round(price / 10) * 10);
+
+  const parts = [
+    input.craft || "handmade craft",
+    input.material ? `made from ${input.material}` : "",
+    days ? `about ${input.duration} of work` : ""
+  ].filter(Boolean);
+
+  return {
+    suggestedPrice: price,
+    currency: "INR",
+    rationale: `Suggested from ${parts.join(", ")}.`,
+    demo: config.demoMode || !process.env.OPENAI_API_KEY
   };
 }

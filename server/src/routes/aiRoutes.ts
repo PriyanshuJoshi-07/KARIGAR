@@ -7,6 +7,9 @@ import {
   enhanceImageHandler,
   transcribeHandler,
   generateDescriptionHandler,
+  generateProductHandler,
+  suggestPriceHandler,
+  translateHandler,
   researchHandler,
   generatePromotionHandler,
   calculateDeliveryHandler,
@@ -45,7 +48,11 @@ aiRoutes.get("/status", demoStatus);
 aiRoutes.post("/analyze-image", upload.single("image"), analyzeImageHandler);
 aiRoutes.post("/enhance-image", enhanceImageHandler);
 aiRoutes.post("/transcribe", transcribeHandler);
+aiRoutes.post("/extract", transcribeHandler);
 aiRoutes.post("/generate-description", generateDescriptionHandler);
+aiRoutes.post("/generate-product", generateProductHandler);
+aiRoutes.post("/suggest-price", suggestPriceHandler);
+aiRoutes.post("/translate", translateHandler);
 aiRoutes.post("/research", researchHandler);
 aiRoutes.post("/generate-promotion", generatePromotionHandler);
 aiRoutes.post("/calculate-delivery", calculateDeliveryHandler);

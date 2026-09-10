@@ -14,17 +14,33 @@ export function VoicePage() {
   const speech = useSpeech(getLang());
   const [err, setErr] = useState<string | null>(null);
 
-  async function onHeard(text: string) {
-    const combined = [draft.transcript, text].filter(Boolean).join(" ");
+  async function applyTranscript(text: string, replace = false) {
+    const incoming = text.trim();
+    if (!incoming) return;
+    let combined = incoming;
+    if (!replace && draft.transcript) {
+      const existing = draft.transcript.trim();
+      if (incoming.includes(existing)) combined = incoming;
+      else if (existing.includes(incoming)) combined = existing;
+      else combined = `${existing} ${incoming}`;
+    }
     patch({ transcript: combined });
     try {
       const res = await api.transcribe(combined, getLang());
-      patch({ transcript: res.transcript || combined });
-      if (!draft.productName) patch({ productName: text.slice(0, 80) });
-      if (!draft.extra) patch({ extra: text });
-    } catch {
-      patch({ extra: text });
+      patch({
+        transcript: res.transcript || combined,
+        productName: res.productName || draft.productName,
+        material: res.material || draft.material,
+        duration: res.duration || draft.duration,
+        extra: res.extra || draft.extra
+      });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t("networkError"));
     }
+  }
+
+  async function onHeard(text: string) {
+    await applyTranscript(text);
   }
 
   function goNext() {
@@ -74,6 +90,18 @@ export function VoicePage() {
         <label>
           <span className="text-sm text-clay-600">{t("extra")}</span>
           <textarea className="input mt-1" rows={3} value={draft.extra} onChange={(e) => patch({ extra: e.target.value })} />
+        </label>
+        <label>
+          <span className="text-sm text-clay-600">{t("typeInstead")}</span>
+          <textarea
+            className="input mt-1"
+            rows={3}
+            value={draft.transcript}
+            onChange={(e) => patch({ transcript: e.target.value })}
+            onBlur={() => {
+              if (draft.transcript) applyTranscript(draft.transcript, true);
+            }}
+          />
         </label>
         <label>
           <span className="text-sm text-clay-600">{t("artisan")}</span>
