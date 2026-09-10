@@ -28,7 +28,7 @@ export function DescriptionPage() {
         artisanName: draft.artisanName,
         originCity: draft.originCity,
         originState: draft.originState,
-        imageUrl: draft.chosenUrls[0] || "",
+        imageUrl: draft.chosenUrls.find((url) => url && !url.startsWith("blob:")) || draft.images[0]?.persistentUrl || "",
         size: draft.size
       });
       patch({

@@ -2,6 +2,8 @@ import { Router } from "express";
 import multer from "multer";
 import path from "node:path";
 import fs from "node:fs";
+import crypto from "node:crypto";
+import { extensionForMime, isAllowedImageMime } from "../utils/images.js";
 import {
   analyzeImageHandler,
   enhanceImageHandler,
@@ -24,8 +26,8 @@ fs.mkdirSync(uploadRoot, { recursive: true });
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadRoot),
   filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9.\-]/g, "_");
-    cb(null, `${Date.now()}-${safe}`);
+    const ext = extensionForMime(file.mimetype) || ".jpg";
+    cb(null, `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`);
   }
 });
 
@@ -33,9 +35,13 @@ const upload = multer({
   storage,
   limits: { fileSize: config.maxImageMb * 1024 * 1024, files: 3 },
   fileFilter: (_req, file, cb) => {
-    const ok = ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.mimetype);
-    if (!ok) {
+    if (!isAllowedImageMime(file.mimetype)) {
       cb(new AppError(400, "Only JPEG, PNG, WebP or GIF images are allowed"));
+      return;
+    }
+    const original = path.basename(file.originalname || "");
+    if (original.includes("..") || original.includes("/") || original.includes("\\")) {
+      cb(new AppError(400, "Invalid image file name"));
       return;
     }
     cb(null, true);

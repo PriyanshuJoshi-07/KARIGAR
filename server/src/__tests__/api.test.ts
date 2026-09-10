@@ -83,6 +83,27 @@ describe("API health and catalog", () => {
     assert.equal(res.status, 400);
   });
 
+  it("rejects blob image URLs on publish", async () => {
+    const res = await request(app).post("/api/products").send({
+      title: "Flower Pot",
+      shortDescription: "Clay pot",
+      longDescription: "Clay and sand flower pot",
+      material: "clay and sand",
+      craft: "Pottery",
+      basePrice: 800,
+      images: [{ url: "blob:http://localhost:5173/abc", alt: "pot" }]
+    });
+    assert.equal(res.status, 400);
+    assert.match(String(res.body.error), /upload|temporary|blob/i);
+  });
+
+  it("rejects invalid image uploads", async () => {
+    const res = await request(app)
+      .post("/api/ai/analyze-image")
+      .attach("image", Buffer.from("not-an-image"), { filename: "notes.txt", contentType: "text/plain" });
+    assert.equal(res.status, 400);
+  });
+
   it("calculates delivery", async () => {
     const res = await request(app).post("/api/ai/calculate-delivery").send({
       originState: "Assam",

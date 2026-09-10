@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useSeller } from "./SellerContext";
 import { api, formatInr } from "../../services/api";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { isPersistentImageUrl } from "../../utils/images";
 
 const SLUGS: Record<string, string> = {
   Basket: "baskets",
@@ -30,7 +31,15 @@ export function PublishPage() {
     setBusy(true);
     setErr(null);
     try {
-      const images = (draft.chosenUrls.length ? draft.chosenUrls : draft.images.map((i) => i.url)).map((url, i) => ({
+      const imageUrls = (draft.chosenUrls.length ? draft.chosenUrls : draft.images.map((i) => i.persistentUrl || i.url)).filter(
+        (url) => isPersistentImageUrl(url)
+      );
+      if (!imageUrls.length) {
+        setErr(t("failedUpload"));
+        setBusy(false);
+        return;
+      }
+      const images = imageUrls.map((url) => ({
         url,
         alt: d.title
       }));
@@ -47,7 +56,7 @@ export function PublishPage() {
         originState: draft.originState,
         originCity: draft.originCity || "Village",
         size: draft.size,
-        categorySlug: SLUGS[draft.analysis?.productType || ""] || "baskets",
+        categorySlug: d.categorySlug || SLUGS[draft.analysis?.productType || ""] || "pottery",
         images,
         promotion: draft.promotion
       });

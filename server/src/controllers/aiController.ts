@@ -10,6 +10,7 @@ import { extractDetailsFromTranscript } from "../ai/extract.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { cleanText } from "../utils/sanitize.js";
 import { config } from "../utils/config.js";
+import { assertPersistentImageUrl } from "../utils/images.js";
 
 export async function analyzeImageHandler(req: Request, res: Response, next: NextFunction) {
   try {
@@ -28,8 +29,7 @@ export async function analyzeImageHandler(req: Request, res: Response, next: Nex
 
 export async function enhanceImageHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const url = cleanText(req.body?.url, 500);
-    if (!url) throw new AppError(400, "Image URL is required");
+    const url = assertPersistentImageUrl(cleanText(req.body?.url, 500));
     const result = await enhanceImage(url);
     res.json(result);
   } catch (err) {

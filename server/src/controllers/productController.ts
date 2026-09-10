@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { prisma } from "../utils/prisma.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { cleanText } from "../utils/sanitize.js";
+import { assertPersistentImageUrl } from "../utils/images.js";
 
 const productInclude = {
   category: true,
@@ -85,14 +86,12 @@ export async function createProduct(req: Request, res: Response, next: NextFunct
       ? (body.features as unknown[]).map((f) => cleanText(f, 120)).filter(Boolean)
       : [];
     const images = Array.isArray(body.images)
-      ? (body.images as { url?: string; alt?: string }[])
-          .map((img, i) => ({
-            url: cleanText(img.url, 500),
-            alt: cleanText(img.alt, 160) || title,
-            isPrimary: i === 0,
-            sortOrder: i
-          }))
-          .filter((img) => img.url)
+      ? (body.images as { url?: string; alt?: string }[]).map((img, i) => ({
+          url: assertPersistentImageUrl(cleanText(img.url, 500)),
+          alt: cleanText(img.alt, 160) || title,
+          isPrimary: i === 0,
+          sortOrder: i
+        }))
       : [];
 
     if (!title) throw new AppError(400, "Product title is required");

@@ -3,6 +3,8 @@ import type { GeneratedDescription, ImageAnalysis, PromotionContent, DeliveryEst
 
 export interface DraftImage {
   url: string;
+  previewUrl: string;
+  persistentUrl?: string;
   file?: File;
   name: string;
 }
