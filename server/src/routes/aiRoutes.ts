@@ -21,10 +21,16 @@ import { config } from "../utils/config.js";
 import { AppError } from "../middleware/errorHandler.js";
 
 const uploadRoot = path.resolve(process.cwd(), "..", config.uploadDir);
-fs.mkdirSync(uploadRoot, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadRoot),
+  destination: (_req, _file, cb) => {
+    try {
+      fs.mkdirSync(uploadRoot, { recursive: true });
+      cb(null, uploadRoot);
+    } catch (err) {
+      cb(err instanceof Error ? err : new Error("Failed to create upload directory"), uploadRoot);
+    }
+  },
   filename: (_req, file, cb) => {
     const ext = extensionForMime(file.mimetype) || ".jpg";
     cb(null, `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`);
